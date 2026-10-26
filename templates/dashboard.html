@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DataFort-Gateway V3.0 | Cyber Defense Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #030712;
+      --panel-bg: rgba(8, 14, 28, 0.72);
+      --panel-border: rgba(0, 242, 254, 0.18);
+      --panel-glow: rgba(0, 242, 254, 0.08);
+      --cyan: #00f2fe;
+      --blue: #38bdf8;
+      --deep-blue: #0284c7;
+      --purple: #a855f7;
+      --purple-glow: rgba(168, 85, 247, 0.25);
+      --emerald: #10b981;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+      --font-display: 'Orbitron', sans-serif;
+      --font-body: 'Space Grotesk', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* 3D Canvas Background */
+    #cyber-3d-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Cinematic Overlay Scanlines & Vignette */
+    .cinematic-vignette {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 50%, transparent 45%, rgba(2, 6, 23, 0.88) 100%);
+    }
+    .cinematic-scanlines {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 2;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15) 0px,
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      opacity: 0.6;
+    }
+
+    /* Main Container */
+    .app-viewport {
+      position: relative;
+      z-index: 10;
+      max-width: 1460px;
+      margin: 0 auto;
+      padding: 24px 28px 48px;
+    }
+
+    /* Command Center Header */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      margin-bottom: 24px;
+      background: rgba(10, 18, 36, 0.75);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 0 30px rgba(0, 242, 254, 0.08);
+      position: relative;
+    }
+    .header-bar::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: 24px; width: 60px; height: 2px;
+      background: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .radar-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 242, 254, 0.5);
+      position: relative;
+      background: radial-gradient(circle, rgba(0, 242, 254, 0.15) 0%, transparent 70%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+    }
+    .radar-sweep {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0deg, transparent 270deg, rgba(0, 242, 254, 0.6) 360deg);
+      animation: radarRotate 3s linear infinite;
+    }
+    @keyframes radarRotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .radar-core {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan);
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #ffffff, var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(0, 242, 254, 0.15);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      -webkit-text-fill-color: var(--cyan);
+    }
+    .brand-subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      margin-top: 3px;
+    }
+
+    /* Header Telemetry Pills */
+    .hud-telemetry {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .hud-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .hud-chip strong { color: #f8fafc; }
+    .hud-pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulseGreen 2s infinite;
+    }
+    @keyframes pulseGreen {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(0.8); }
+    }
+    .hud-link {
+      color: var(--cyan);
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .hud-link:hover {
+      text-shadow: 0 0 8px var(--cyan);
+      color: #fff;
+    }
+
+    /* Stats Grid */
+    .stats-deck {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-box {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      backdrop-filter: blur(16px);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-box:hover {
+      transform: translateY(-2px);
+      border-color: rgba(0, 242, 254, 0.4);
+    }
+    .stat-box::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 3px; height: 100%;
+    }
+    .stat-box.blue::after { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+    .stat-box.green::after { background: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
+    .stat-box.red::after { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+    .stat-box.purple::after { background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+
+    .stat-label {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .stat-num {
+      font-size: 28px;
+      font-weight: 800;
+      font-family: var(--font-display);
+      line-height: 1.1;
+    }
+    .stat-num.blue { color: var(--cyan); text-shadow: 0 0 15px rgba(0, 242, 254, 0.3); }
+    .stat-num.green { color: var(--emerald); text-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+    .stat-num.red { color: #f87171; text-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+    .stat-num.purple { color: #d8b4fe; text-shadow: 0 0 15px rgba(168, 85, 247, 0.3); }
+
+    /* Navigation Tabs */
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 4px;
+    }
+    .tab-trigger {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 8px 18px;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .tab-trigger:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .tab-trigger.active {
+      color: var(--cyan);
+      background: rgba(0, 242, 254, 0.08);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      border-bottom: 2px solid var(--cyan);
+      box-shadow: 0 -4px 15px rgba(0, 242, 254, 0.1);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Cyber Panels */
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 22px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      position: relative;
+      margin-bottom: 22px;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--cyan);
+      background: rgba(0, 242, 254, 0.1);
+      border: 1px solid rgba(0, 242, 254, 0.25);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    /* Form Controls */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    /* Structured Role Selector Chips */
+    .role-segmented-control {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .role-chip {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      transition: all 0.2s;
+      text-align: left;
+    }
+    .role-chip:hover {
+      border-color: rgba(0, 242, 254, 0.3);
+      color: #fff;
+    }
+    .role-chip.active {
+      background: rgba(0, 242, 254, 0.12);
+      border-color: var(--cyan);
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+    }
+    .role-chip-title {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .role-chip.active .role-chip-title { color: var(--cyan); }
+    .role-chip-desc {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .cyber-input {
+      width: 100%;
+      background: rgba(5, 9, 20, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 9px 14px;
+      color: #f8fafc;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .cyber-input:focus {
+      outline: none;
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);
+    }
+
+    textarea.cyber-input {
+      min-height: 170px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+
+    /* Structured Action Toolbar & Compact Cyber Buttons */
+    .action-toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .cyber-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 18px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-radius: 8px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid transparent;
+      outline: none;
+      white-space: nowrap;
+      height: 38px;
+    }
+
+    /* Compact Primary Button */
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(2, 132, 199, 0.4));
+      border-color: rgba(0, 242, 254, 0.6);
+      color: #ffffff;
+      box-shadow: 0 0 18px rgba(0, 242, 254, 0.3), inset 0 0 10px rgba(0, 242, 254, 0.15);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.45), rgba(2, 132, 199, 0.6));
+      border-color: var(--cyan);
+      box-shadow: 0 0 25px rgba(0, 242, 254, 0.6), inset 0 0 15px rgba(0, 242, 254, 0.3);
+      transform: translateY(-1px);
+    }
+
+    /* Compact Purple Forensic Button */
+    .btn-purple {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(147, 51, 234, 0.4));
+      border-color: rgba(168, 85, 247, 0.6);
+      color: #ffffff;
+      box-shadow: 0 0 18px rgba(168, 85, 247, 0.3), inset 0 0 10px rgba(168, 85, 247, 0.15);
+    }
+    .btn-purple:hover {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.45), rgba(147, 51, 234, 0.6));
+      border-color: #c084fc;
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.6);
+      transform: translateY(-1px);
+    }
+
+    /* Compact Outline/Ghost Button */
+    .btn-ghost {
+      background: rgba(15, 23, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: var(--text-dim);
+    }
+    .btn-ghost:hover {
+      background: rgba(30, 41, 59, 0.8);
+      border-color: rgba(255, 255, 255, 0.35);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* Compact Danger Button */
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.3);
+      border-color: var(--danger);
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* Output Console */
+    .dual-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .output-viewport {
+      background: #02050f;
+      border: 1px solid rgba(0, 242, 254, 0.25);
+      border-radius: 10px;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #38bdf8;
+      min-height: 380px;
+      max-height: 480px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      position: relative;
+    }
+    .scanner-laser {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, #00f2fe, #fff, #00f2fe, transparent);
+      box-shadow: 0 0 15px #00f2fe, 0 0 30px #00f2fe;
+      display: none;
+      animation: laserSweep 1.6s ease-in-out infinite alternate;
+    }
+    @keyframes laserSweep {
+      0% { top: 2%; opacity: 0.3; }
+      50% { opacity: 1; }
+      100% { top: 96%; opacity: 0.4; }
+    }
+
+    /* Tables */
+    .table-container {
+      max-height: 340px;
+      overflow-y: auto;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(5, 9, 20, 0.6);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+    th {
+      background: rgba(10, 18, 36, 0.95);
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      position: sticky; top: 0;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: #e2e8f0;
+    }
+    tr:hover td { background: rgba(0, 242, 254, 0.04); }
+
+    .tag-blocked { color: #f87171; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+    .tag-sanitized { color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+    .tag-staged { color: #c084fc; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+    .tag-clean { color: #34d399; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+
+    @media (max-width: 980px) {
+      .dual-grid { grid-template-columns: 1fr; }
+      .stats-deck { grid-template-columns: repeat(2, 1fr); }
+      .header-bar { flex-direction: column; gap: 14px; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 3D Live Cyber Wallpaper Canvas -->
+  <canvas id="cyber-3d-canvas"></canvas>
+  <div class="cinematic-vignette"></div>
+  <div class="cinematic-scanlines"></div>
+
+  <div class="app-viewport">
+    <!-- Command Header -->
+    <header class="header-bar">
+      <div class="brand-group">
+        <div class="radar-icon">
+          <div class="radar-sweep"></div>
+          <div class="radar-core"></div>
+        </div>
+        <div>
+          <div class="brand-title">
+            DATAFORT-GATEWAY <span class="brand-badge">MAESTRO V3.0</span>
+          </div>
+          <div class="brand-subtitle">Zero-Trust Banking DLP & Cryptographic Forensic Steganography</div>
+        </div>
+      </div>
+
+      <div class="hud-telemetry">
+        <div class="hud-chip">
+          <span class="hud-pulse-dot"></span>
+          <span>DEFENSE ACTIVE</span>
+        </div>
+        <div class="hud-chip" style="color: var(--cyan);">
+          <span>LATENCY: <strong>1.8ms</strong></span>
+        </div>
+        <div class="hud-chip" style="color: #c084fc;">
+          <span>DPDP (2023) ENFORCED</span>
+        </div>
+        <div class="hud-chip">
+          <a class="hud-link" href="/viewer" target="_blank">👁️ Secure Viewer</a>
+        </div>
+        <div class="hud-chip">
+          <a class="hud-link" href="/docs" target="_blank">📖 API Docs</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Key Metrics Deck -->
+    <div class="stats-deck">
+      <div class="stat-box blue">
+        <div class="stat-label">Requests Inspected</div>
+        <div class="stat-num blue" id="stat-requests">0</div>
+      </div>
+      <div class="stat-box green">
+        <div class="stat-label">PII Tokens Scrubbed</div>
+        <div class="stat-num green" id="stat-redactions">0</div>
+      </div>
+      <div class="stat-box red">
+        <div class="stat-label">Blocked Exfiltrations</div>
+        <div class="stat-num red" id="stat-attacks">0</div>
+      </div>
+      <div class="stat-box purple">
+        <div class="stat-label">Covert Watermarks Stamped</div>
+        <div class="stat-num purple" id="stat-watermarks">0</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="tab-nav">
+      <button class="tab-trigger active" onclick="switchTab('sandbox-tab', this)">⚡ Real-Time DLP Sandbox</button>
+      <button class="tab-trigger" onclick="switchTab('forensic-tab', this)">🔍 Forensic Leak Detective (Steganography)</button>
+      <button class="tab-trigger" onclick="switchTab('approval-tab', this)">🛡️ Four-Eyes Consensus Quarantine</button>
+    </nav>
+
+    <!-- TAB 1: DLP SANDBOX -->
+    <section id="sandbox-tab" class="tab-panel active">
+      <div class="dual-grid">
+        <!-- Left Inbound Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">⚡ Inbound Banking Data Stream</div>
+            <div class="panel-tag">RBAC ENFORCED</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Active Role (Dynamic Masking Policy):</label>
+            <div class="role-segmented-control">
+              <div class="role-chip active" onclick="setRole('staff', this)" id="role-chip-staff">
+                <div class="role-chip-title">👤 Teller</div>
+                <div class="role-chip-desc">Full Tokenization</div>
+              </div>
+              <div class="role-chip" onclick="setRole('manager', this)" id="role-chip-manager">
+                <div class="role-chip-title">👔 Manager</div>
+                <div class="role-chip-desc">Partial Masking</div>
+              </div>
+              <div class="role-chip" onclick="setRole('investigator', this)" id="role-chip-investigator">
+                <div class="role-chip-title">🕵️ Officer</div>
+                <div class="role-chip-desc">Audited Unmasked</div>
+              </div>
+            </div>
+            <input type="hidden" id="role-select" value="staff">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="emp-input">Origin Terminal Employee ID:</label>
+            <input type="text" id="emp-input" class="cyber-input" value="EMP_94821" placeholder="e.g. EMP_94821">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="payload-input">Raw Customer Record JSON (PAN, Aadhaar, UPI, Mobile, Email):</label>
+            <textarea id="payload-input" class="cyber-input">{
+  "customer_name": "Ranjith Kumar",
+  "pan_card": "ABCDE1234F",
+  "aadhaar_number": "5486 9874 1234",
+  "mobile": "+91-9876543210",
+  "upi_id": "ranjith@sbi",
+  "email": "ranjith.kumar@sbibank.com",
+  "cif_id": "CIF1234567890AB",
+  "dob": "1990-05-14",
+  "account_balance": 250000.00
+}</textarea>
+          </div>
+
+          <!-- Structured Compact Action Toolbar -->
+          <div class="action-toolbar">
+            <button class="cyber-btn btn-primary" onclick="runSandboxTest()">
+              ⚡ Intercept & Protect
+            </button>
+            <button class="cyber-btn btn-ghost" onclick="resetPayload()">
+              ↺ Reset
+            </button>
+            <button class="cyber-btn btn-danger" onclick="simulateBulkAttack()">
+              🛑 Simulate Exfiltration Attack
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Sanitized Output Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">🛡️ Sanitized Output Stream</div>
+            <div id="response-status" class="panel-tag" style="color: var(--text-dim);">READY</div>
+          </div>
+
+          <div style="position: relative;">
+            <div class="scanner-laser" id="laser-bar"></div>
+            <pre class="output-viewport" id="output-box">// Click "⚡ Intercept & Protect" to execute zero-trust masking and embed invisible steganographic watermark.</pre>
+          </div>
+
+          <div class="action-toolbar" style="margin-top: 14px;">
+            <button class="cyber-btn btn-ghost" onclick="copySanitizedOutput()">
+              📋 Copy Sanitized Payload
+            </button>
+            <button class="cyber-btn btn-purple" onclick="transferToForensics()">
+              🔍 Send to Leak Detective →
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: FORENSIC DETECTIVE -->
+    <section id="forensic-tab" class="tab-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🔍 Covert Steganographic Leak Tracer</div>
+          <div class="panel-tag" style="color: var(--purple); border-color: rgba(168, 85, 247, 0.4);">ZERO-WIDTH CRYPTO DECODER</div>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-bottom: 16px;">
+          Paste any leaked text extract, chat leak, or CSV dump. DataFort scans invisible zero-width Unicode characters (<code style="color: var(--cyan);">\u200b</code>, <code style="color: var(--cyan);">\u200c</code>, <code style="color: var(--cyan);">\u200d</code>) to reveal the cryptographic digital fingerprint and unmask the leaker.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label" for="leak-input">Leaked Text / Dark Web Sample Dump:</label>
+          <textarea id="leak-input" class="cyber-input" placeholder="Paste leaked customer record string here..." style="min-height: 120px;"></textarea>
+        </div>
+
+        <!-- Compact Structured Toolbar -->
+        <div class="action-toolbar">
+          <button class="cyber-btn btn-purple" onclick="runForensicInvestigation()">
+            🔍 Decode Rogue Leaker
+          </button>
+          <button class="cyber-btn btn-ghost" onclick="pasteSampleLeak()">
+            📋 Paste Last Export
+          </button>
+          <button class="cyber-btn btn-ghost" onclick="document.getElementById('leak-input').value = ''">
+            🧹 Clear
+          </button>
+        </div>
+
+        <div id="forensic-result" style="display: none; margin-top: 20px; padding: 18px; border-radius: 10px; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.35); box-shadow: 0 0 25px rgba(168, 85, 247, 0.15);">
+          <div style="font-family: var(--font-display); font-size: 13px; font-weight: 700; color: #c084fc; margin-bottom: 10px;">
+            🚨 FORENSIC ATTRIBUTION REPORT: DIGITAL FINGERPRINT VERIFIED
+          </div>
+          <pre id="forensic-json" style="font-family: var(--font-mono); font-size: 12px; color: #f8fafc; line-height: 1.5; white-space: pre-wrap;"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: APPROVAL QUARANTINE -->
+    <section id="approval-tab" class="tab-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🛡️ Four-Eyes Quorum Approval Queue</div>
+          <div class="panel-tag">EXPORTS &gt; 20 RECORDS REQUIRE SUPERVISOR QUORUM</div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Requester EMP</th>
+                <th>Record Volume</th>
+                <th>Export Justification</th>
+                <th>Status</th>
+                <th>Supervisor Consensus</th>
+              </tr>
+            </thead>
+            <tbody id="approval-table-body">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">No staged exports currently in quarantine.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE TELEMETRY AUDIT LOG STREAM -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📡 Autonomous Audit Telemetry Stream</div>
+        <div class="panel-tag" style="color: var(--emerald); border-color: rgba(16, 185, 129, 0.4);">POLLING (3000ms)</div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Security Event</th>
+              <th>Client IP</th>
+              <th>Employee ID</th>
+              <th>Assigned Role</th>
+              <th>Intervention Policy</th>
+            </tr>
+          </thead>
+          <tbody id="audit-table-body">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Awaiting incoming network traffic...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Three.js 3D Live Cyber Wallpaper & Command Engine -->
+  <script>
+    /* ============================================================
+       1. 3D LIVE CYBER WALLPAPER (THREE.JS)
+       ============================================================ */
+    (function initCyber3DWallpaper() {
+      const canvas = document.getElementById('cyber-3d-canvas');
+      if (!window.THREE) return;
+
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x030712, 0.0018);
+
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
+      camera.position.set(0, 45, 120);
+
+      const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      // 1. Undulating Cyber Grid Terrain
+      const gridHelper = new THREE.GridHelper(1200, 60, 0x00f2fe, 0x082f49);
+      gridHelper.position.y = -40;
+      scene.add(gridHelper);
+
+      // 2. Central Holographic Geodesic Core
+      const coreGroup = new THREE.Group();
+      scene.add(coreGroup);
+
+      // Rotating wireframe icosahedron
+      const icoGeo = new THREE.IcosahedronGeometry(22, 1);
+      const icoMat = new THREE.MeshBasicMaterial({
+        color: 0x00f2fe,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.35
+      });
+      const icoMesh = new THREE.Mesh(icoGeo, icoMat);
+      coreGroup.add(icoMesh);
+
+      // Inner glowing point sphere
+      const innerGeo = new THREE.SphereGeometry(9, 16, 16);
+      const innerMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.5
+      });
+      const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+      coreGroup.add(innerMesh);
+
+      // Orbital Defense Rings (Gyroscope)
+      const ringGeo1 = new THREE.TorusGeometry(32, 0.35, 16, 100);
+      const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x00f2fe, transparent: true, opacity: 0.4 });
+      const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
+      ring1.rotation.x = Math.PI / 3;
+      coreGroup.add(ring1);
+
+      const ringGeo2 = new THREE.TorusGeometry(36, 0.3, 16, 100);
+      const ringMat2 = new THREE.MeshBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0.35 });
+      const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
+      ring2.rotation.y = Math.PI / 4;
+      coreGroup.add(ring2);
+
+      // 3. Floating Cyber Particle Swarm (1000 nodes)
+      const particleCount = 1000;
+      const particleGeo = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+      for (let i = 0; i < particleCount * 3; i += 3) {
+        positions[i] = (Math.random() - 0.5) * 800;
+        positions[i + 1] = (Math.random() - 0.5) * 400;
+        positions[i + 2] = (Math.random() - 0.5) * 800;
+      }
+      particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const particleMat = new THREE.PointsMaterial({
+        color: 0x38bdf8,
+        size: 2.2,
+        transparent: true,
+        opacity: 0.65
+      });
+      const particleSystem = new THREE.Points(particleGeo, particleMat);
+      scene.add(particleSystem);
+
+      // Mouse Parallax
+      let mouseX = 0, mouseY = 0;
+      window.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX - window.innerWidth / 2) * 0.04;
+        mouseY = (e.clientY - window.innerHeight / 2) * 0.04;
+      });
+
+      // Window Resize
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // Animation Loop
+      let clock = new THREE.Clock();
+      function animate() {
+        requestAnimationFrame(animate);
+        const elapsedTime = clock.getElapsedTime();
+
+        // Rotate Holographic Core
+        icoMesh.rotation.x = elapsedTime * 0.2;
+        icoMesh.rotation.y = elapsedTime * 0.25;
+        ring1.rotation.z = elapsedTime * 0.3;
+        ring2.rotation.x = elapsedTime * 0.25;
+        innerMesh.rotation.y = -elapsedTime * 0.35;
+
+        // Particle Drift
+        particleSystem.rotation.y = elapsedTime * 0.02;
+
+        // Grid Forward Motion Illusion
+        gridHelper.position.z = (elapsedTime * 25) % 40;
+
+        // Parallax Camera Sway
+        camera.position.x += (mouseX - camera.position.x) * 0.03;
+        camera.position.y += (-mouseY + 45 - camera.position.y) * 0.03;
+        camera.lookAt(0, 0, 0);
+
+        renderer.render(scene, camera);
+      }
+      animate();
+    })();
+
+    /* ============================================================
+       2. COMMAND CENTER INTERACTIVITY & APIS
+       ============================================================ */
+    let watermarkCount = 0;
+    let lastSanitizedJson = "";
+
+    function setRole(role, el) {
+      document.querySelectorAll('.role-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('role-select').value = role;
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-trigger').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    function resetPayload() {
+      document.getElementById('payload-input').value = JSON.stringify({
+        customer_name: "Ranjith Kumar",
+        pan_card: "ABCDE1234F",
+        aadhaar_number: "5486 9874 1234",
+        mobile: "+91-9876543210",
+        upi_id: "ranjith@sbi",
+        email: "ranjith.kumar@sbibank.com",
+        cif_id: "CIF1234567890AB",
+        dob: "1990-05-14",
+        account_balance: 250000.00
+      }, null, 2);
+    }
+
+    function simulateBulkAttack() {
+      // Simulate bulk export of 105 records to trigger Quarantine & Anomaly Gate
+      const bulk = [];
+      for (let i = 1; i <= 105; i++) {
+        bulk.push({
+          customer_name: `Victim Account ${i}`,
+          pan_card: "ABCDE1234F",
+          aadhaar_number: "5486 9874 1234",
+          account_id: `AC_100${i}`
+        });
+      }
+      document.getElementById('payload-input').value = JSON.stringify(bulk, null, 2);
+      runSandboxTest();
+    }
+
+    function copySanitizedOutput() {
+      if (!lastSanitizedJson) return;
+      navigator.clipboard.writeText(lastSanitizedJson);
+      const btn = event.target;
+      const orig = btn.innerText;
+      btn.innerText = '✓ COPIED!';
+      setTimeout(() => btn.innerText = orig, 1500);
+    }
+
+    function transferToForensics() {
+      if (!lastSanitizedJson) return;
+      document.getElementById('leak-input').value = lastSanitizedJson;
+      switchTab('forensic-tab', document.querySelectorAll('.tab-trigger')[1]);
+      runForensicInvestigation();
+    }
+
+    function pasteSampleLeak() {
+      if (lastSanitizedJson) {
+        document.getElementById('leak-input').value = lastSanitizedJson;
+      } else {
+        document.getElementById('leak-input').value = '{"customer_name": "Ranjith Kumar", "pan_card": "[TOKENIZED_PAN_e3b0c442]"}';
+      }
+    }
+
+    async function updateStats() {
+      try {
+        const res = await fetch('/api/v1/stats');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('stat-requests').innerText = data.total_requests_inspected;
+          document.getElementById('stat-redactions').innerText = data.total_pii_redactions;
+          document.getElementById('stat-attacks').innerText = data.total_blocked_attacks;
+          document.getElementById('stat-watermarks').innerText = watermarkCount;
+        }
+      } catch (e) {}
+    }
+
+    async function updateAuditLogs() {
+      try {
+        const res = await fetch('/api/v1/audit-logs');
+        if (res.ok) {
+          const logs = await res.json();
+          const tbody = document.getElementById('audit-table-body');
+          if (logs.length === 0) return;
+          tbody.innerHTML = logs.map(ev => {
+            let actionBadge = '<span class="tag-clean">' + ev.action + '</span>';
+            if (ev.action === 'BLOCKED') {
+              actionBadge = '<span class="tag-blocked">BLOCKED</span>';
+            } else if (ev.action.includes('STAGED')) {
+              actionBadge = '<span class="tag-staged">STAGED</span>';
+            } else if (ev.action.includes('SANITIZED')) {
+              actionBadge = '<span class="tag-sanitized">' + ev.action + '</span>';
+            }
+            return `<tr>
+              <td>${new Date(ev.timestamp).toLocaleTimeString()}</td>
+              <td><strong>${ev.event}</strong></td>
+              <td>${ev.client_ip}</td>
+              <td>${ev.emp_id || 'EMP_ANON'}</td>
+              <td>${ev.role || 'staff'}</td>
+              <td>${actionBadge}</td>
+            </tr>`;
+          }).join('');
+        }
+      } catch (e) {}
+    }
+
+    async function updateApprovals() {
+      try {
+        const res = await fetch('/api/v1/approvals');
+        if (res.ok) {
+          const list = await res.json();
+          const tbody = document.getElementById('approval-table-body');
+          if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">No staged exports currently in quarantine.</td></tr>';
+            return;
+          }
+          tbody.innerHTML = list.map(item => `
+            <tr>
+              <td><strong>${item.request_id}</strong></td>
+              <td>${item.requester_emp_id}</td>
+              <td>${item.record_count} records</td>
+              <td>${item.justification}</td>
+              <td><span class="tag-staged">${item.status}</span></td>
+              <td>
+                <button class="cyber-btn" onclick="decideApproval('${item.request_id}', 'APPROVE')" style="padding: 4px 10px; height: 26px; font-size: 11px; background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399;">Approve</button>
+                <button class="cyber-btn" onclick="decideApproval('${item.request_id}', 'REJECT')" style="padding: 4px 10px; height: 26px; font-size: 11px; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171;">Reject</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {}
+    }
+
+    async function decideApproval(id, action) {
+      await fetch('/api/v1/approvals/action', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({request_id: id, action: action, approver_emp_id: "MGR_BRANCH_01"})
+      });
+      updateApprovals();
+      updateAuditLogs();
+    }
+
+    async function runSandboxTest() {
+      const role = document.getElementById('role-select').value;
+      const empId = document.getElementById('emp-input').value;
+      const inputStr = document.getElementById('payload-input').value;
+      const statusEl = document.getElementById('response-status');
+      const outputEl = document.getElementById('output-box');
+      const laser = document.getElementById('laser-bar');
+
+      laser.style.display = 'block';
+      statusEl.innerText = '⚡ SCANNING CHECKSUMS & RBAC POLICY...';
+      statusEl.style.color = 'var(--cyan)';
+
+      try {
+        const payload = JSON.parse(inputStr);
+        const res = await fetch('/api/v1/export', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Role': role,
+            'X-Employee-ID': empId
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        setTimeout(() => {
+          laser.style.display = 'none';
+          statusEl.innerText = res.status + ' ' + (res.ok ? 'OK (STEGANOGRAPHY EMBEDDED)' : 'INTERCEPTED');
+          statusEl.style.color = res.ok ? 'var(--cyan)' : 'var(--danger)';
+          outputEl.innerText = JSON.stringify(data, null, 2);
+          lastSanitizedJson = JSON.stringify(data, null, 2);
+          document.getElementById('leak-input').value = lastSanitizedJson;
+          watermarkCount++;
+          updateStats();
+          updateAuditLogs();
+          updateApprovals();
+        }, 320);
+      } catch (err) {
+        laser.style.display = 'none';
+        statusEl.innerText = 'SYNTAX ERROR';
+        statusEl.style.color = 'var(--danger)';
+        outputEl.innerText = 'Invalid JSON: ' + err.message;
+      }
+    }
+
+    async function runForensicInvestigation() {
+      const text = document.getElementById('leak-input').value;
+      const resBox = document.getElementById('forensic-result');
+      const jsonEl = document.getElementById('forensic-json');
+
+      const res = await fetch('/api/v1/decode-leak', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({leaked_content: text})
+      });
+
+      const data = await res.json();
+      resBox.style.display = 'block';
+      jsonEl.innerText = JSON.stringify(data, null, 2);
+    }
+
+    updateStats();
+    updateAuditLogs();
+    updateApprovals();
+    setInterval(updateStats, 3000);
+    setInterval(updateAuditLogs, 3000);
+    setInterval(updateApprovals, 3000);
+  </script>
+</body>
+</html>
